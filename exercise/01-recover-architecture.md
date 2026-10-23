@@ -38,15 +38,21 @@ evidence: system/online-boutique/protos/demo.proto, system/online-boutique/kuber
 
 | ผู้เรียก → ผู้ถูกเรียก | หลักฐานที่ AI อ้าง | ยืนยันแล้วหรือไม่ ✅ / ❌ / ❓ | สิ่งที่นิสิตพบ |
 |---|---|---|---|
-| | | | |
-| | | | |
-| | | | |
-| | | | |
-| | | | |
+|frontend → productcatalogservice|frontend.yaml (PRODUCT_CATALOG_SERVICE_ADDR=productcatalogservice:3550)|✅|พบ environment variable นี้จริง และ frontend Service เปิด HTTP ที่ port 80 → 8080|
+|frontend → cartservice|frontend.yaml (CART_SERVICE_ADDR=cartservice:7070)|✅|พบ address จริง และ cartservice เปิด Service port 7070|
+|frontend → checkoutservice|frontend.yaml (CHECKOUT_SERVICE_ADDR=checkoutservice:5050)|✅|พบ address จริง และ checkoutservice เปิด Service port 5050|
+|checkoutservice → paymentservice|checkoutservice.yaml (PAYMENT_SERVICE_ADDR=paymentservice:50051)|✅|พบ environment variable จริง และ paymentservice ถูกตั้งเป็น dependency address|
+|cartservice → redis-cart|cartservice.yaml (REDIS_ADDR=redis-cart:6379)|✅|พบ address จริง และมี redis-cart Service ที่ port 6379; storage ใช้ emptyDir จึงไม่ใช่ persistent storage|
 
 - **สิ่งที่ผิดหรือขาดหายไป** ใน Run B (dependency ที่ไม่มีจริง, dependency ที่ขาดไป, container ที่น่าสงสัย): …
 
 ## สะท้อนคิด (ข้อละ 2–3 ประโยค)
 
 1. เปรียบเทียบ A กับ B: agent **ไม่สามารถ**รู้อะไรได้จากไฟล์ `.proto` เพียงไฟล์เดียว และเพราะเหตุใด
+
+จากไฟล์ demo.proto เพียงไฟล์เดียว agent ระบุได้เฉพาะ service interfaces, RPC methods และ message types เช่น CheckoutService, CartService และ PaymentService แต่ไม่สามารถรู้ implementation language, port, deployment หรือ service address ได้ เพราะข้อมูลเหล่านั้นไม่ได้อยู่ใน .proto ไฟล์ Kubernetes manifests ใน Run B จึงช่วยยืนยัน runtime dependencies เช่น frontend → cartservice และ cartservice → redis-cart ได้
+
 2. ข้อผิดพลาด**ข้อใดข้อหนึ่ง**ที่จะทำให้สมาชิกใหม่ของทีมเข้าใจผิดมากที่สุด หากเผยแพร่แผนภาพนี้โดยไม่ตรวจสอบ
+
+ข้อผิดพลาดที่อันตรายที่สุดคือการนำ loadgenerator หรือ shoppingassistantservice ไปแสดงเป็นส่วนหนึ่งของ production architecture โดยไม่ตรวจสอบว่า resource ถูก enable ใน kustomization.yaml หรือไม่ สมาชิกใหม่อาจเข้าใจว่า service เหล่านี้ deploy และใช้งานจริง ทั้งที่ loadgenerator และ shopping-assistant component ถูก comment out อยู่ใน configuration ปัจจุบัน.
+
